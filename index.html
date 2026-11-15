@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#4F46E5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="漢字マスター" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <title>漢字読みマスター！小4〜高校 フラッシュカード</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #F8FAFC;
+      --foreground: #0F172A;
+      --card: #FFFFFF;
+      --border: #E2E8F0;
+      --secondary: #F1F5F9;
+      --muted-foreground: #64748B;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #0F172A;
+        --foreground: #F8FAFC;
+        --card: #1E293B;
+        --border: #334155;
+        --secondary: #334155;
+        --muted-foreground: #94A3B8;
+      }
+    }
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .perspective-1000 { perspective: 1000px; }
+    .preserve-3d { transform-style: preserve-3d; }
+    .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .rotate-y-180 { transform: rotateY(180deg); }
+
+    @keyframes popIn {
+      0% { transform: scale(0.85); opacity: 0; }
+      70% { transform: scale(1.04); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    @keyframes stampDrop {
+      0% { transform: scale(2.2) rotate(-18deg); opacity: 0; }
+      65% { transform: scale(0.92) rotate(-6deg); opacity: 1; }
+      100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+    }
+    @keyframes confettiFall {
+      0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(140px) rotate(360deg); opacity: 0; }
+    }
+    .animate-pop { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .animate-float { animation: floatSlow 3.2s ease-in-out infinite; }
+    .animate-stamp { animation: stampDrop 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      animation: confettiFall 1.1s ease-out forwards;
+      pointer-events: none;
+    }
+    .card-shadow {
+      box-shadow: 0 12px 30px -8px rgba(79, 70, 229, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen m-0 p-0">
+  <div id="app" class="max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-4">
+    <!-- Top Header / Gamification Bar -->
+    <header class="rounded-2xl bg-[var(--card)] border-2 border-[var(--border)] p-3.5 sm:p-4 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
+            漢
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-xl font-extrabold tracking-tight">漢字読みマスター</h1>
+              <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">小4〜高校</span>
+            </div>
+            <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)]">イラストでイメージして楽しく覚えよう！</p>
+          </div>
+        </div>
+
+        <!-- Stats Pills -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/25">
+            <span class="text-sm">🏆</span>
+            <div>
+              <div class="text-[10px] font-bold text-[var(--muted-foreground)] leading-none">LV.<span id="hdr-level" class="text-indigo-600 dark:text-indigo-400 text-xs font-black">1</span></div>
+              <div class="w-16 sm:w-20 h-2 bg-[var(--border)] rounded-full overflow-hidden mt-1">
+                <div id="hdr-xp-bar" class="h-full bg-gradient-to-r from-indigo-500 to-pink-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+            <span id="hdr-xp-text" class="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">0 XP</span>
+          </div>
+
+          <div class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/25">
+            <span class="text-sm">🔥</span>
+            <span id="hdr-streak" class="text-xs sm:text-sm font-extrabold text-orange-600 dark:text-orange-400">1日</span>
+          </div>
+
+          <button id="btn-open-qr" type="button" class="px-2.5 py-1.5 rounded-xl bg-[var(--secondary)] hover:opacity-80 text-xs font-bold flex items-center gap-1" title="スマホ用QRコードを表示">
+            <span>📱</span> <span class="hidden sm:inline">スマホで開く</span>
+          </button>
+
+          <div id="combo-badge" class="hidden items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 animate-pop">
+            <span class="text-sm">⚡</span>
+            <span id="hdr-combo" class="text-xs font-black text-emerald-600 dark:text-emerald-400">0 COMBO</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="grid grid-cols-3 gap-1.5 mt-3 pt-2.5 border-t border-[var(--border)]">
+        <button data-tab="study" class="tab-btn py-2 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 bg-indigo-600 text-white shadow-sm">
+          <span>🎴</span> 学習カード
+        </button>
+        <button data-tab="stats" class="tab-btn py-2 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 text-[var(--muted-foreground)] hover:bg-[var(--secondary)]">
+          <span>🎖️</span> スタンプ・進捗
+        </button>
+        <button data-tab="manage" class="tab-btn py-2 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 text-[var(--muted-foreground)] hover:bg-[var(--secondary)]">
+          <span>📚</span> 単語帳・追加
+        </button>
+      </nav>
+    </header>
+
+    <!-- QR / Mobile Share Modal -->
+    <div id="qr-modal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onclick="this.classList.add('hidden')">
+      <div class="bg-[var(--card)] border-2 border-[var(--border)] rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-pop" onclick="event.stopPropagation()">
+        <div class="text-lg font-extrabold">📱 スマホでアクセス＆アプリ化</div>
+        <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+          スマホのカメラで下のQRコードを読み取ると、このアプリがすぐ開きます！
+        </p>
+        <div class="bg-white p-4 rounded-2xl inline-block border border-slate-200 shadow-inner">
+          <img id="qr-img" alt="QR Code" class="w-44 h-44 mx-auto" />
+        </div>
+        <div class="text-left text-xs bg-[var(--secondary)] p-3 rounded-xl space-y-1.5">
+          <div class="font-extrabold text-indigo-600 dark:text-indigo-400">💡 ホーム画面に追加するとさらに便利！</div>
+          <div>・<b>iPhone (Safari)</b>: 下の「共有 [↑]」→「ホーム画面に追加」</div>
+          <div>・<b>Android (Chrome)</b>: 右上の「︙」→「ホーム画面に追加 / アプリをインストール」</div>
+        </div>
+        <button type="button" onclick="document.getElementById('qr-modal').classList.add('hidden')" class="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm">
+          とじる
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: STUDY VIEW -->
+    <main id="tab-study" class="space-y-3.5">
+      <!-- Grade Filter & Session Info -->
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-3 space-y-2.5">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar" id="grade-filters">
+          <button data-grade="ALL" class="grade-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm">すべて</button>
+          <button data-grade="小4" class="grade-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[var(--secondary)] text-[var(--foreground)]">小4</button>
+          <button data-grade="小5" class="grade-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[var(--secondary)] text-[var(--foreground)]">小5</button>
+          <button data-grade="小6" class="grade-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[var(--secondary)] text-[var(--foreground)]">小6</button>
+          <button data-grade="中学" class="grade-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[var(--secondary)] text-[var(--foreground)]">中学</button>
+          <button data-grade="高校" class="grade-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[var(--secondary)] text-[var(--foreground)]">高校</button>
+          <button data-grade="PINNED" class="grade-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">⭐ 苦手</button>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 text-xs font-bold pt-1 border-t border-[var(--border)]">
+          <div class="flex items-center gap-2">
+            <span class="text-[var(--muted-foreground)]">今日の目標: <span id="daily-progress-text" class="text-[var(--foreground)]">0 / 15</span></span>
+            <div class="w-20 sm:w-28 h-2 bg-[var(--border)] rounded-full overflow-hidden">
+              <div id="daily-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+          <span id="queue-count" class="px-2.5 py-0.5 rounded-lg bg-[var(--secondary)] text-[var(--foreground)]">残り 0枚</span>
+        </div>
+      </div>
+
+      <!-- Flashcard Stage -->
+      <div id="study-stage" class="relative">
+        <div id="confetti-layer" class="absolute inset-0 overflow-hidden pointer-events-none z-20"></div>
+
+        <!-- Level Up Toast -->
+        <div id="levelup-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white font-black shadow-xl animate-pop flex items-center gap-3">
+          <span class="text-2xl">🎉</span>
+          <div>
+            <div class="text-[10px] opacity-90">LEVEL UP!</div>
+            <div id="levelup-msg" class="text-sm sm:text-base">レベルアップ！</div>
+          </div>
+        </div>
+
+        <!-- Empty / Completed State -->
+        <div id="empty-state" class="hidden rounded-3xl bg-[var(--card)] border-2 border-dashed border-[var(--border)] p-8 text-center space-y-4">
+          <div class="text-5xl">🎊</div>
+          <h2 class="text-lg sm:text-xl font-extrabold">この範囲の復習は完了しました！</h2>
+          <p class="text-xs sm:text-sm text-[var(--muted-foreground)] max-w-md mx-auto">
+            バッチリ頑張りました！他の学年を選ぶか、もう一度シャッフルして練習できます。
+          </p>
+          <div class="flex justify-center pt-2">
+            <button id="btn-practice-all" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-sm shadow-md active:scale-95 transition">
+              🔄 この範囲をもう一度練習する
+            </button>
+          </div>
+        </div>
+
+        <!-- 3D Flip Card -->
+        <div id="card-wrapper" class="max-w-xl mx-auto perspective-1000">
+          <div id="flashcard" class="relative w-full min-h-[420px] sm:min-h-[440px] transition-transform duration-500 preserve-3d cursor-pointer select-none">
+            
+            <!-- FRONT SIDE -->
+            <div class="absolute inset-0 backface-hidden rounded-3xl bg-[var(--card)] border-2 border-[var(--border)] card-shadow p-5 sm:p-6 flex flex-col justify-between">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <span id="front-grade" class="px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">小4</span>
+                  <span id="front-status" class="px-2.5 py-1 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--muted-foreground)]">新規</span>
+                  <span id="front-type" class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">熟語</span>
+                </div>
+                <button id="btn-pin-front" type="button" class="pin-btn p-2 rounded-xl hover:bg-[var(--secondary)] transition text-xl" title="苦手・お気に入りに登録">
+                  ☆
+                </button>
+              </div>
+
+              <!-- Front Illustration + Kanji Word -->
+              <div class="flex-1 flex flex-col items-center justify-center py-2 space-y-3">
+                <div id="front-illustration" class="w-32 h-32 sm:w-36 sm:h-36 rounded-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-[var(--border)] flex items-center justify-center p-3 animate-float overflow-hidden">
+                </div>
+
+                <div class="text-center space-y-1.5">
+                  <div id="front-reading-hint" class="h-7 flex items-center justify-center">
+                    <span id="front-reading-text" class="hidden px-3.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold text-base tracking-widest animate-pop"></span>
+                  </div>
+                  <div id="front-word" class="text-4xl sm:text-5xl font-black tracking-wider text-[var(--foreground)]">
+                    図書館
+                  </div>
+                </div>
+              </div>
+
+              <!-- Front Action Buttons (Touch Friendly) -->
+              <div class="grid grid-cols-12 gap-2 pt-2" onclick="event.stopPropagation()">
+                <button id="btn-reveal-reading" type="button" class="col-span-5 py-3 px-2 rounded-2xl bg-amber-500/15 active:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-1">
+                  <span>👀</span> 読み仮名
+                </button>
+                <button id="btn-speak-front" type="button" class="col-span-2 py-3 rounded-2xl bg-[var(--secondary)] active:scale-95 text-[var(--foreground)] font-bold text-base transition flex items-center justify-center" title="発音を聞く">
+                  🔊
+                </button>
+                <button id="btn-flip-front" type="button" class="col-span-5 py-3 px-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-1">
+                  <span>🔄</span> 答えを見る
+                </button>
+              </div>
+            </div>
+
+            <!-- BACK SIDE -->
+            <div class="absolute inset-0 backface-hidden rotate-y-180 rounded-3xl bg-[var(--card)] border-2 border-indigo-500/40 card-shadow p-5 sm:p-6 flex flex-col justify-between">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span id="back-grade" class="px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">小4</span>
+                  <span class="text-xs font-bold text-[var(--muted-foreground)]">解答・イメージ</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button id="btn-speak-back" type="button" class="px-3 py-1.5 rounded-xl bg-indigo-500/10 active:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400 font-bold text-xs transition flex items-center gap-1" onclick="event.stopPropagation()">
+                    <span>🔊</span> 発音
+                  </button>
+                  <button id="btn-pin-back" type="button" class="pin-btn p-1.5 rounded-xl hover:bg-[var(--secondary)] transition text-xl" onclick="event.stopPropagation()">
+                    ☆
+                  </button>
+                </div>
+              </div>
+
+              <!-- Back Content -->
+              <div class="flex-1 flex flex-col justify-center items-center text-center space-y-3 py-1">
+                <div class="flex items-center gap-3.5">
+                  <div id="back-illustration" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[var(--secondary)] border border-[var(--border)] flex items-center justify-center p-2 shrink-0"></div>
+                  <div class="text-left">
+                    <div id="back-reading" class="text-lg sm:text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-wider">としょかん</div>
+                    <div id="back-word" class="text-2xl sm:text-4xl font-black tracking-wide">図書館</div>
+                  </div>
+                </div>
+
+                <div class="w-full rounded-2xl bg-[var(--secondary)]/70 border border-[var(--border)] p-3 text-left space-y-2">
+                  <div>
+                    <span class="inline-block text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 mb-0.5">意味</span>
+                    <p id="back-meaning" class="text-xs sm:text-sm font-medium leading-relaxed"></p>
+                  </div>
+                  <div class="pt-1.5 border-t border-[var(--border)]">
+                    <span class="inline-block text-[10px] font-extrabold px-2 py-0.5 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 mb-0.5">例文</span>
+                    <p id="back-example" class="text-xs sm:text-sm text-[var(--muted-foreground)] leading-relaxed"></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SRS Rating Buttons -->
+              <div class="space-y-1.5 pt-1" onclick="event.stopPropagation()">
+                <div class="text-[11px] text-center font-bold text-[var(--muted-foreground)]">どれくらい覚えていた？</div>
+                <div class="grid grid-cols-3 gap-2">
+                  <button id="rate-again" type="button" class="py-3 px-1.5 rounded-2xl bg-rose-500 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-sm transition flex flex-col items-center">
+                    <span>😵 まだ</span>
+                    <span class="text-[10px] opacity-85 font-normal mt-0.5">もう1回</span>
+                  </button>
+                  <button id="rate-hard" type="button" class="py-3 px-1.5 rounded-2xl bg-amber-500 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-sm transition flex flex-col items-center">
+                    <span>🤔 あいまい</span>
+                    <span id="hard-interval-label" class="text-[10px] opacity-85 font-normal mt-0.5">1日後</span>
+                  </button>
+                  <button id="rate-good" type="button" class="py-3 px-1.5 rounded-2xl bg-emerald-500 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-sm transition flex flex-col items-center">
+                    <span>😄 覚えた！</span>
+                    <span id="good-interval-label" class="text-[10px] opacity-85 font-normal mt-0.5">+15 XP</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: STATS & STAMPS VIEW -->
+    <section id="tab-stats" class="hidden space-y-4">
+      <div class="grid grid-cols-3 gap-2.5 sm:gap-4">
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-3.5 text-center sm:text-left">
+          <div class="text-[11px] font-bold text-[var(--muted-foreground)]">覚えた単語</div>
+          <div class="text-xl sm:text-3xl font-black text-emerald-500"><span id="stat-mastered">0</span><span class="text-xs font-bold text-[var(--muted-foreground)]">/<span id="stat-total">0</span></span></div>
+        </div>
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-3.5 text-center sm:text-left">
+          <div class="text-[11px] font-bold text-[var(--muted-foreground)]">累計クリア</div>
+          <div class="text-xl sm:text-3xl font-black text-indigo-500"><span id="stat-reviews">0</span><span class="text-xs font-bold text-[var(--muted-foreground)]">回</span></div>
+        </div>
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-3.5 text-center sm:text-left">
+          <div class="text-[11px] font-bold text-[var(--muted-foreground)]">苦手ピン</div>
+          <div class="text-xl sm:text-3xl font-black text-rose-500"><span id="stat-pinned">0</span><span class="text-xs font-bold text-[var(--muted-foreground)]">語</span></div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5 space-y-3.5">
+        <h2 class="text-sm sm:text-base font-extrabold flex items-center gap-2"><span>📈</span> 学年別マスター状況</h2>
+        <div id="grade-stats-list" class="space-y-3"></div>
+      </div>
+
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5 space-y-3.5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm sm:text-base font-extrabold flex items-center gap-2"><span>🎖️</span> ごほうびスタンプ帳</h2>
+        </div>
+        <div id="stamps-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: WORD MANAGEMENT & IMPORT VIEW -->
+    <section id="tab-manage" class="hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5 space-y-3">
+          <h2 class="text-sm sm:text-base font-extrabold flex items-center gap-2"><span>➕</span> 新しい漢字・熟語を追加</h2>
+          <form id="add-word-form" class="space-y-3 text-sm">
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-bold text-[var(--muted-foreground)] mb-1">漢字・熟語 *</label>
+                <input id="inp-word" type="text" required placeholder="例: 勇気" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-[var(--muted-foreground)] mb-1">読み（ひらがな）*</label>
+                <input id="inp-reading" type="text" required placeholder="例: ゆうき" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-bold text-[var(--muted-foreground)] mb-1">学年レベル</label>
+                <select id="inp-grade" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+                  <option value="小4">小4</option>
+                  <option value="小5">小5</option>
+                  <option value="小6">小6</option>
+                  <option value="中学">中学</option>
+                  <option value="高校">高校</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-[var(--muted-foreground)] mb-1">イラストテーマ</label>
+                <select id="inp-theme" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+                  <option value="book">📚 本・学び</option>
+                  <option value="nature">🌿 自然・植物</option>
+                  <option value="weather">☀️ 天気・空</option>
+                  <option value="heart">💖 心・感情</option>
+                  <option value="star">✨ 光・希望</option>
+                  <option value="science">🔬 科学・実験</option>
+                  <option value="city">🏙️ 社会・街</option>
+                  <option value="history">🏯 歴史・伝統</option>
+                  <option value="think">💡 思考・哲学</option>
+                  <option value="challenge">🔥 挑戦・努力</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--muted-foreground)] mb-1">意味</label>
+              <input id="inp-meaning" type="text" placeholder="例: おそれずに立ち向かう強い気持ち" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--muted-foreground)] mb-1">例文</label>
+              <input id="inp-example" type="text" placeholder="例: 勇気を出して発表する。" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold shadow-sm">
+              カードを追加する
+            </button>
+          </form>
+        </div>
+
+        <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5 space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <h2 class="text-sm sm:text-base font-extrabold flex items-center gap-2"><span>📥</span> CSV / JSON 一括インポート</h2>
+            <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+              CSV形式: <code class="px-1.5 py-0.5 rounded bg-[var(--secondary)]">漢字,読み,学年,意味,例文,テーマ</code>
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <label class="cursor-pointer px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
+                <span>📂</span> CSV / JSONを選択
+                <input id="file-import" type="file" accept=".csv,.json" class="hidden" />
+              </label>
+              <button id="btn-download-template" type="button" class="px-3 py-2.5 rounded-xl bg-[var(--secondary)] text-xs font-bold">
+                📄 サンプルCSV
+              </button>
+            </div>
+            <div id="import-status" class="text-xs font-bold text-emerald-600 dark:text-emerald-400"></div>
+          </div>
+
+          <div class="pt-4 border-t border-[var(--border)] space-y-2.5">
+            <h3 class="text-xs sm:text-sm font-extrabold">💾 学習データの保存・引き継ぎ</h3>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-export-backup" type="button" class="px-3 py-2 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 text-xs font-bold">
+                ⬇️ JSON保存
+              </button>
+              <label class="cursor-pointer px-3 py-2 rounded-xl bg-[var(--secondary)] text-xs font-bold">
+                ⬆️ 復元
+                <input id="file-restore" type="file" accept=".json" class="hidden" />
+              </label>
+              <button id="btn-reset-all" type="button" class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-xs font-bold">
+                🗑️ リセット
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm sm:text-base font-extrabold">📖 収録単語 (<span id="list-count">0</span>語)</h2>
+          <div class="flex items-center gap-2">
+            <input id="search-words" type="text" placeholder="検索..." class="w-32 sm:w-44 px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs" />
+            <select id="filter-list-grade" class="px-2.5 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs">
+              <option value="ALL">全学年</option>
+              <option value="小4">小4</option>
+              <option value="小5">小5</option>
+              <option value="小6">小6</option>
+              <option value="中学">中学</option>
+              <option value="高校">高校</option>
+            </select>
+          </div>
+        </div>
+        <div class="overflow-x-auto max-h-80 overflow-y-auto rounded-xl border border-[var(--border)]">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[var(--secondary)] sticky top-0 font-bold">
+              <tr>
+                <th class="p-2">学年</th>
+                <th class="p-2">漢字</th>
+                <th class="p-2">読み</th>
+                <th class="p-2">状態</th>
+                <th class="p-2 text-center">苦手</th>
+              </tr>
+            </thead>
+            <tbody id="words-table-body" class="divide-y divide-[var(--border)]"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    const BUILTIN_CARDS = [
+      { id: "g4_1", grade: "小4", type: "熟語", word: "図書館", reading: "としょかん", meaning: "多くの本を集めて、だれでも読んだり借りたりできる施設。", example: "放課後に図書館で歴史の本を借りた。", theme: "book" },
+      { id: "g4_2", grade: "小4", type: "熟語", word: "観察", reading: "かんさつ", meaning: "物のようすや変化を注意深くよく見ること。", example: "アサガオの成長を毎日観察する。", theme: "science" },
+      { id: "g4_3", grade: "小4", type: "熟語", word: "季節", reading: "きせつ", meaning: "春・夏・秋・冬など、一年のうちで気候が移り変わる区分。", example: "日本の四季は季節ごとの自然が美しい。", theme: "nature" },
+      { id: "g4_4", grade: "小4", type: "送り仮名", word: "美しい", reading: "うつくしい", meaning: "見た目や心などがきれいで、心をひかれるようす。", example: "山の頂上から美しい夕焼けが見えた。", theme: "star" },
+      { id: "g4_5", grade: "小4", type: "熟語", word: "努力", reading: "どりょく", meaning: "目標を達成するために力を尽くしてがんばること。", example: "毎日の努力が実を結んで試合に勝った。", theme: "challenge" },
+      { id: "g4_6", grade: "小4", type: "熟語", word: "親切", reading: "しんせつ", meaning: "相手のために思いやりをもって世話をしたり助けたりすること。", example: "道に迷った人に親切に道案内をした。", theme: "heart" },
+      { id: "g4_7", grade: "小4", type: "送り仮名", word: "勇ましい", reading: "いさましい", meaning: "元気がよく、おそれないようす。", example: "勇ましいかけ声で応援団が登場した。", theme: "challenge" },
+      { id: "g4_8", grade: "小4", type: "熟語", word: "実験", reading: "じっけん", meaning: "仮説が正しいかを確かめるために実際に試してみること。", example: "理科室で電気の通り方を調べる実験をした。", theme: "science" },
+      { id: "g4_9", grade: "小4", type: "熟語", word: "天気予報", reading: "てんきよほう", meaning: "これからの天気や気温を前もって知らせること。", example: "天気予報を見て、折り畳み傘を持っていった。", theme: "weather" },
+      { id: "g4_10", grade: "小4", type: "送り仮名", word: "輝く", reading: "かがやく", meaning: "まぶしく光りきらめくこと。すぐれた成果をあげること。", example: "夜空に無数の星が明るく輝く。", theme: "star" },
+
+      { id: "g5_1", grade: "小5", type: "熟語", word: "環境", reading: "かんきょう", meaning: "人や生き物を取り巻く自然や社会のようす。", example: "地球の環境を守るためにごみを減らす。", theme: "nature" },
+      { id: "g5_2", grade: "小5", type: "熟語", word: "伝統", reading: "でんとう", meaning: "昔から代々受け継がれてきた文化や技術、考え方。", example: "京都には日本の伝統的な建物が多く残っている。", theme: "history" },
+      { id: "g5_3", grade: "小5", type: "熟語", word: "貿易", reading: "ぼうえき", meaning: "国と国との間で品物やサービスを売り買いすること。", example: "港には外国との貿易で運ばれた荷物が並ぶ。", theme: "city" },
+      { id: "g5_4", grade: "小5", type: "送り仮名", word: "確かめる", reading: "たしかめる", meaning: "まちがいがないか、事実かどうかを調べてはっきりさせること。", example: "テストを提出する前に見直して答えを確かめる。", theme: "think" },
+      { id: "g5_5", grade: "小5", type: "熟語", word: "感謝", reading: "かんしゃ", meaning: "してもらったことに対してありがたいと思う気持ち。", example: "いつも支えてくれる家族に感謝の言葉を伝える。", theme: "heart" },
+      { id: "g5_6", grade: "小5", type: "熟語", word: "構造", reading: "こうぞう", meaning: "物事を組み立てている仕組みや骨組み。", example: "地震に強い建物の構造を調べる。", theme: "city" },
+      { id: "g5_7", grade: "小5", type: "送り仮名", word: "招く", reading: "まねく", meaning: "人を呼び寄せること。また、ある結果を引き起こすこと。", example: "誕生日に仲の良い友達を家に招く。", theme: "heart" },
+      { id: "g5_8", grade: "小5", type: "熟語", word: "衛星", reading: "えいせい", meaning: "惑星のまわりを回る天体。または人工的に打ち上げた観測機。", example: "気象衛星からの画像で台風の動きがわかる。", theme: "star" },
+      { id: "g5_9", grade: "小5", type: "熟語", word: "知識", reading: "ちしき", meaning: "学んだり経験したりして身につけた物事の情報や理解。", example: "本をたくさん読んで幅広い知識を身につける。", theme: "book" },
+      { id: "g5_10", grade: "小5", type: "送り仮名", word: "豊か", reading: "ゆたか", meaning: "満ち足りて余裕があるようす。心が広いようす。", example: "緑豊かな公園でピクニックを楽しむ。", theme: "nature" },
+
+      { id: "g6_1", grade: "小6", type: "熟語", word: "宇宙", reading: "うちゅう", meaning: "地球や太陽、星などすべてを含む果てしない空間。", example: "宇宙飛行士が国際宇宙ステーションで活動する。", theme: "star" },
+      { id: "g6_2", grade: "小6", type: "熟語", word: "民主主義", reading: "みんしゅしゅぎ", meaning: "国民が主権をもち、みんなの意見で政治を決める仕組み。", example: "話し合いによって決めるのは民主主義の基本だ。", theme: "city" },
+      { id: "g6_3", grade: "小6", type: "熟語", word: "創造", reading: "そうぞう", meaning: "これまでにない新しいものを自分で考え出して作ること。", example: "自由な発想で未来の街を創造する。", theme: "think" },
+      { id: "g6_4", grade: "小6", type: "送り仮名", word: "尊い", reading: "とうとい", meaning: "価値が高く、大切で敬うべきようす。", example: "世界中の人々の尊い命を守る。", theme: "heart" },
+      { id: "g6_5", grade: "小6", type: "熟語", word: "誠実", reading: "せいじつ", meaning: "うそやごまかしがなく、真心をもって真剣に向き合うようす。", example: "だれに対しても誠実な態度で接する。", theme: "heart" },
+      { id: "g6_6", grade: "小6", type: "送り仮名", word: "源", reading: "みなもと", meaning: "川の流れが始まるところ。物事の起こりやもと。", example: "この大河の源は山の奥の湧き水だ。", theme: "nature" },
+      { id: "g6_7", grade: "小6", type: "熟語", word: "批判", reading: "ひはん", meaning: "物事の良い点や問題点をよく考えて評価・判断すること。", example: "相手の意見を一方的に批判せず、理由を聞く。", theme: "think" },
+      { id: "g6_8", grade: "小6", type: "送り仮名", word: "従う", reading: "したがう", meaning: "相手の命令やルール、流れに合わせて行動すること。", example: "交通ルールに従って安全に道路を渡る。", theme: "city" },
+      { id: "g6_9", grade: "小6", type: "熟語", word: "彫刻", reading: "ちょうこく", meaning: "木や石、金属などを彫ったり刻んだりして形を作る芸術。", example: "美術館で奈良時代の木造彫刻を見学した。", theme: "history" },
+      { id: "g6_10", grade: "小6", type: "送り仮名", word: "暖める", reading: "あたためる", meaning: "冷たいものを温かくすること。", example: "寒い日にスープを鍋で暖める。", theme: "weather" },
+
+      { id: "jh_1", grade: "中学", type: "熟語", word: "矛盾", reading: "むじゅん", meaning: "二つの言動や事実のつじつまが合わないこと。", example: "さっき言ったことと今の行動が矛盾している。", theme: "think" },
+      { id: "jh_2", grade: "中学", type: "熟語", word: "挑戦", reading: "ちょうせん", meaning: "むずかしいことや新しいことに思い切って取り組むこと。", example: "失敗をおそれず、新しい分野に挑戦しよう。", theme: "challenge" },
+      { id: "jh_3", grade: "中学", type: "送り仮名", word: "健やか", reading: "すこやか", meaning: "病気やケガがなく、元気で健康なようす。", example: "祖父母の健やかな毎日を願う。", theme: "nature" },
+      { id: "jh_4", grade: "中学", type: "送り仮名", word: "朗らか", reading: "ほがらか", meaning: "心が明るく、くよくよせず楽しそうなようす。", example: "彼女の朗らかな笑顔がクラスを明るくする。", theme: "weather" },
+      { id: "jh_5", grade: "中学", type: "熟語", word: "謙遜", reading: "けんそん", meaning: "自分を控えめにして、へりくだること。", example: "彼は実力があるのに、いつも謙遜している。", theme: "heart" },
+      { id: "jh_6", grade: "中学", type: "熟語", word: "抽象", reading: "ちゅうしょう", meaning: "具体的なものから共通する性質だけを抜き出して考えること。", example: "抽象的な説明だけでなく、具体例もほしい。", theme: "think" },
+      { id: "jh_7", grade: "中学", type: "熟語", word: "完璧", reading: "かんぺき", meaning: "欠点がひとつもなく、完全に整っていること。", example: "発表の準備を完璧に仕上げて本番に臨んだ。", theme: "star" },
+      { id: "jh_8", grade: "中学", type: "送り仮名", word: "清々しい", reading: "すがすがしい", meaning: "気持ちや空気がさわやかで心地よいようす。", example: "早朝の森は空気が澄んでいて清々しい。", theme: "nature" },
+      { id: "jh_9", grade: "中学", type: "熟語", word: "葛藤", reading: "かっとう", meaning: "心の中で相反する気持ちや考えがぶつかり合って悩むこと。", example: "部活を続けるか受験に専念するかで葛藤する。", theme: "heart" },
+      { id: "jh_10", grade: "中学", type: "熟語", word: "顕著", reading: "けんちょ", meaning: "違いや変化がだれが見てもはっきりわかるほど目立つこと。", example: "練習の成果がタイムの伸びに顕著に表れた。", theme: "science" },
+      { id: "jh_11", grade: "中学", type: "熟語", word: "網羅", reading: "もうら", meaning: "関係のあるものをすべて漏れなく集め尽くすこと。", example: "この参考書は入試に出る重要語句を網羅している。", theme: "book" },
+      { id: "jh_12", grade: "中学", type: "送り仮名", word: "促す", reading: "うながす", meaning: "相手に行動するように声をかけたり刺激したりすること。", example: "先生が生徒たちの積極的な発言を促す。", theme: "challenge" },
+
+      { id: "hs_1", grade: "高校", type: "熟語", word: "曖昧", reading: "あいまい", meaning: "意味や態度がはっきりせず、ぼんやりしているようす。", example: "曖昧な返事をせず、イエスかノーかを伝える。", theme: "think" },
+      { id: "hs_2", grade: "高校", type: "熟語", word: "推敲", reading: "すいこう", meaning: "文章や詩の表現をより良くするために何度も練り直すこと。", example: "小論文を書き終えてから時間をかけて推敲した。", theme: "book" },
+      { id: "hs_3", grade: "高校", type: "熟語", word: "遵守", reading: "じゅんしゅ", meaning: "法律や規則・約束などをしっかり守ること。", example: "実験室では安全規則を遵守しなければならない。", theme: "city" },
+      { id: "hs_4", grade: "高校", type: "熟語", word: "普遍", reading: "ふへん", meaning: "時代や場所を問わず、すべてのものに広く当てはまること。", example: "時代を超えて愛される普遍的なテーマを描く。", theme: "star" },
+      { id: "hs_5", grade: "高校", type: "熟語", word: "躊躇", reading: "ちゅうちょ", meaning: "決心がつかず、ためらってぐずずすること。", example: "一瞬躊躇したが、一歩を踏み出すことにした。", theme: "heart" },
+      { id: "hs_6", grade: "高校", type: "熟語", word: "憂鬱", reading: "ゆううつ", meaning: "気持ちが晴れないでふさぎこむようす。", example: "長雨が続いてなんとなく憂鬱な気分になる。", theme: "weather" },
+      { id: "hs_7", grade: "高校", type: "熟語", word: "凌駕", reading: "りょうが", meaning: "他を追い抜いて、ずっとすぐれた状態になること。", example: "新人の記録が先輩のベストタイムを凌駕した。", theme: "challenge" },
+      { id: "hs_8", grade: "高校", type: "熟語", word: "彷彿", reading: "ほうふつ", meaning: "よく似ていて、その姿や場面が目の前に浮かぶようす。", example: "彼の演奏は往年の名ピアニストを彷彿とさせる。", theme: "history" },
+      { id: "hs_9", grade: "高校", type: "熟語", word: "矜持", reading: "きょうじ", meaning: "自分の能力や立場に対する誇り・プライド。", example: "職人としての矜持を胸に丁寧な仕事を続ける。", theme: "challenge" },
+      { id: "hs_10", grade: "高校", type: "熟語", word: "邂逅", reading: "かいこう", meaning: "思いがけず出会うこと。運命的なめぐりあい。", example: "旅先での思いがけない邂逅が人生を変えた。", theme: "star" },
+      { id: "hs_11", grade: "高校", type: "送り仮名", word: "嗜む", reading: "たしなむ", meaning: "茶道や音楽などの芸事を好み、身につけて楽しむこと。", example: "休日に静かな部屋で茶道を嗜む。", theme: "history" },
+      { id: "hs_12", grade: "高校", type: "送り仮名", word: "補う", reading: "おぎなう", meaning: "足りない部分を足して満たすこと。", example: "睡眠不足を休日の昼寝で少し補う。", theme: "science" }
+    ];
+
+    function getIllustrationHTML(card) {
+      if (card.imageUrl) {
+        return `<img src="${card.imageUrl}" alt="${card.word}" class="w-full h-full object-contain rounded-xl" />`;
+      }
+      const theme = card.theme || "book";
+      const svgs = {
+        book: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#6366F1" opacity="0.16"/><rect x="24" y="34" width="34" height="54" rx="5" fill="#4F46E5"/><rect x="62" y="34" width="34" height="54" rx="5" fill="#6366F1"/><rect x="28" y="38" width="28" height="46" rx="3" fill="#EEF2FF"/><rect x="64" y="38" width="28" height="46" rx="3" fill="#FFFFFF"/><path d="M33 48h18M33 56h18M33 64h12M69 48h18M69 56h18M69 64h14" stroke="#818CF8" stroke-width="3" stroke-linecap="round"/><circle cx="88" cy="26" r="7" fill="#F59E0B"/></svg>`,
+        nature: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#10B981" opacity="0.15"/><path d="M22 92 Q60 76 98 92 L98 100 L22 100 Z" fill="#34D399"/><rect x="55" y="54" width="10" height="32" rx="4" fill="#92400E"/><circle cx="60" cy="44" r="22" fill="#10B981"/><circle cx="44" cy="52" r="14" fill="#059669"/><circle cx="76" cy="52" r="14" fill="#34D399"/><circle cx="30" cy="28" r="8" fill="#FBBF24"/></svg>`,
+        weather: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#0EA5E9" opacity="0.15"/><circle cx="46" cy="44" r="16" fill="#FBBF24"/><path d="M42 78h44a12 12 0 0 0 2-23.8A16 16 0 0 0 56 48a14 14 0 0 0-14 14v2a10 10 0 0 0 0 14z" fill="#E0F2FE" stroke="#38BDF8" stroke-width="3"/></svg>`,
+        heart: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#F43F5E" opacity="0.15"/><path d="M60 92 C60 92 24 68 24 44 C24 31 34 22 46 22 C53 22 58 26 60 31 C62 26 67 22 74 22 C86 22 96 31 96 44 C96 68 60 92 60 92 Z" fill="#FB7185"/><circle cx="88" cy="24" r="4" fill="#FBBF24"/></svg>`,
+        star: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#8B5CF6" opacity="0.18"/><polygon points="60,18 71,44 99,46 77,65 84,93 60,78 36,93 43,65 21,46 49,44" fill="#FBBF24" stroke="#F59E0B" stroke-width="3" stroke-linejoin="round"/></svg>`,
+        science: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#06B6D4" opacity="0.15"/><path d="M48 24h24v8l-4 4v22l18 28a6 6 0 0 1-5 9H39a6 6 0 0 1-5-9l18-28V36l-4-4v-8z" fill="#ECFEFF" stroke="#0891B2" stroke-width="3.5"/><path d="M41 72h38l8 13a3 3 0 0 1-2.5 4.5h-49A3 3 0 0 1 33 85l8-13z" fill="#22D3EE"/></svg>`,
+        city: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#3B82F6" opacity="0.15"/><rect x="24" y="48" width="22" height="46" rx="3" fill="#60A5FA"/><rect x="49" y="28" width="24" height="66" rx="3" fill="#2563EB"/><rect x="76" y="40" width="20" height="54" rx="3" fill="#818CF8"/></svg>`,
+        history: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#D97706" opacity="0.15"/><rect x="26" y="36" width="68" height="8" rx="4" fill="#DC2626"/><rect x="32" y="48" width="56" height="6" rx="2" fill="#B91C1C"/><rect x="38" y="44" width="8" height="48" rx="2" fill="#EF4444"/><rect x="74" y="44" width="8" height="48" rx="2" fill="#EF4444"/><rect x="24" y="90" width="72" height="6" rx="3" fill="#78350F"/></svg>`,
+        think: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#F59E0B" opacity="0.15"/><path d="M60 22a24 24 0 0 0-14 43.4c2.4 1.8 4 4.5 4.4 7.6h19.2c.4-3.1 2-5.8 4.4-7.6A24 24 0 0 0 60 22z" fill="#FDE047" stroke="#F59E0B" stroke-width="3"/><rect x="50" y="76" width="20" height="6" rx="3" fill="#94A3B8"/></svg>`,
+        challenge: `<svg viewBox="0 0 120 120" class="w-full h-full"><circle cx="60" cy="60" r="52" fill="#EF4444" opacity="0.15"/><path d="M62 20 C78 38 88 54 84 72 C80 88 68 96 56 96 C40 96 32 82 36 66 C38 56 46 50 48 42 C52 50 54 54 58 50 C60 40 56 30 62 20 Z" fill="#F97316"/><path d="M60 48 C68 58 72 68 68 78 C66 85 60 88 55 88 C48 88 45 80 48 72 C50 66 56 62 60 48 Z" fill="#FDE047"/></svg>`
+      };
+      return svgs[theme] || svgs.book;
+    }
+
+    const STORAGE_KEY = "kanji_master_srs_v1";
+    const DAILY_GOAL = 15;
+
+    let state = {
+      cards: [...BUILTIN_CARDS],
+      progress: {},
+      stats: { xp: 0, streak: 1, lastStudyDate: null, todayCount: 0, totalReviews: 0, unlockedStamps: [] }
+    };
+
+    let currentGrade = "ALL";
+    let sessionQueue = [];
+    let currentCard = null;
+    let isFlipped = false;
+    let combo = 0;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.customCards && Array.isArray(parsed.customCards)) {
+            const existingIds = new Set(BUILTIN_CARDS.map(c => c.id));
+            const extras = parsed.customCards.filter(c => !existingIds.has(c.id));
+            state.cards = [...BUILTIN_CARDS, ...extras];
+          }
+          if (parsed.progress) state.progress = parsed.progress;
+          if (parsed.stats) state.stats = { ...state.stats, ...parsed.stats };
+        }
+      } catch (e) {}
+      checkDailyReset();
+    }
+
+    function saveState() {
+      const builtinIds = new Set(BUILTIN_CARDS.map(c => c.id));
+      const customCards = state.cards.filter(c => !builtinIds.has(c.id));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        customCards,
+        progress: state.progress,
+        stats: state.stats
+      }));
+    }
+
+    function getTodayStr() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function checkDailyReset() {
+      const today = getTodayStr();
+      if (state.stats.lastStudyDate !== today) {
+        if (state.stats.lastStudyDate) {
+          const prev = new Date(state.stats.lastStudyDate);
+          const now = new Date(today);
+          const diffDays = Math.round((now - prev) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) state.stats.streak += 1;
+          else if (diffDays > 1) state.stats.streak = 1;
+        }
+        state.stats.todayCount = 0;
+        state.stats.lastStudyDate = today;
+        saveState();
+      }
+    }
+
+    function getCardProgress(id) {
+      return state.progress[id] || { reps: 0, interval: 0, ease: 2.5, nextReview: 0, pinned: false, lastResult: null };
+    }
+
+    function buildQueue(includeAll = false) {
+      const now = Date.now();
+      let pool = state.cards.filter(c => {
+        if (currentGrade === "ALL") return true;
+        if (currentGrade === "PINNED") return getCardProgress(c.id).pinned;
+        return c.grade === currentGrade;
+      });
+
+      if (!includeAll) {
+        const due = pool.filter(c => {
+          const p = getCardProgress(c.id);
+          return p.reps === 0 || p.nextReview <= now;
+        });
+        due.sort((a, b) => {
+          const pa = getCardProgress(a.id);
+          const pb = getCardProgress(b.id);
+          if (pa.reps > 0 && pb.reps === 0) return -1;
+          if (pa.reps === 0 && pb.reps > 0) return 1;
+          return pa.nextReview - pb.nextReview;
+        });
+        sessionQueue = due;
+      } else {
+        sessionQueue = [...pool].sort(() => Math.random() - 0.5);
+      }
+      nextCard();
+    }
+
+    function nextCard() {
+      isFlipped = false;
+      document.getElementById("flashcard").classList.remove("rotate-y-180");
+      document.getElementById("front-reading-text").classList.add("hidden");
+      document.getElementById("front-reading-text").textContent = "";
+
+      if (sessionQueue.length === 0) {
+        currentCard = null;
+        document.getElementById("card-wrapper").classList.add("hidden");
+        document.getElementById("empty-state").classList.remove("hidden");
+      } else {
+        currentCard = sessionQueue[0];
+        document.getElementById("empty-state").classList.add("hidden");
+        document.getElementById("card-wrapper").classList.remove("hidden");
+        renderCurrentCard();
+      }
+      updateTopUI();
+    }
+
+    function renderCurrentCard() {
+      if (!currentCard) return;
+      const p = getCardProgress(currentCard.id);
+
+      document.getElementById("front-grade").textContent = currentCard.grade;
+      document.getElementById("front-type").textContent = currentCard.type || "熟語";
+      document.getElementById("front-status").textContent = p.reps === 0 ? "新規" : (p.interval >= 7 ? "習得済み" : "学習中");
+      document.getElementById("front-word").textContent = currentCard.word;
+      document.getElementById("front-illustration").innerHTML = getIllustrationHTML(currentCard);
+
+      document.getElementById("back-grade").textContent = currentCard.grade;
+      document.getElementById("back-word").textContent = currentCard.word;
+      document.getElementById("back-reading").textContent = currentCard.reading;
+      document.getElementById("back-meaning").textContent = currentCard.meaning || "（意味未登録）";
+      document.getElementById("back-example").textContent = currentCard.example || "（例文未登録）";
+      document.getElementById("back-illustration").innerHTML = getIllustrationHTML(currentCard);
+
+      const pinChar = p.pinned ? "⭐" : "☆";
+      document.getElementById("btn-pin-front").textContent = pinChar;
+      document.getElementById("btn-pin-back").textContent = pinChar;
+
+      const nextHard = Math.max(1, Math.round((p.interval || 1) * 1.2));
+      const nextGood = p.reps === 0 ? 1 : (p.reps === 1 ? 3 : Math.round(p.interval * p.ease));
+      document.getElementById("hard-interval-label").textContent = `${nextHard}日後`;
+      document.getElementById("good-interval-label").textContent = `${nextGood}日後 (+15XP)`;
+    }
+
+    function rateCard(rating) {
+      if (!currentCard) return;
+      const p = { ...getCardProgress(currentCard.id) };
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+
+      sessionQueue.shift();
+
+      if (rating === "again") {
+        p.reps = 0;
+        p.interval = 0;
+        p.ease = Math.max(1.3, p.ease - 0.2);
+        p.nextReview = now;
+        combo = 0;
+        sessionQueue.splice(Math.min(2, sessionQueue.length), 0, currentCard);
+        addXP(3);
+      } else if (rating === "hard") {
+        p.reps += 1;
+        p.interval = Math.max(1, Math.round((p.interval || 1) * 1.2));
+        p.ease = Math.max(1.3, p.ease - 0.05);
+        p.nextReview = now + p.interval * dayMs;
+        combo += 1;
+        addXP(8);
+      } else if (rating === "good") {
+        p.reps += 1;
+        p.interval = p.reps === 1 ? 1 : (p.reps === 2 ? 3 : Math.round(p.interval * p.ease));
+        p.ease = Math.min(3.0, p.ease + 0.1);
+        p.nextReview = now + p.interval * dayMs;
+        combo += 1;
+        addXP(15 + Math.min(10, combo * 2));
+        spawnConfetti();
+      }
+
+      state.progress[currentCard.id] = p;
+      state.stats.todayCount += 1;
+      state.stats.totalReviews += 1;
+      state.stats.lastStudyDate = getTodayStr();
+
+      checkStamps();
+      saveState();
+      nextCard();
+    }
+
+    function getLevelInfo(xp) {
+      let level = 1, needed = 100, rem = xp;
+      while (rem >= needed) {
+        rem -= needed;
+        level += 1;
+        needed = Math.round(needed * 1.25);
+      }
+      return { level, currentXP: rem, neededXP: needed, pct: Math.round((rem / needed) * 100) };
+    }
+
+    function addXP(amount) {
+      const before = getLevelInfo(state.stats.xp).level;
+      state.stats.xp += amount;
+      const after = getLevelInfo(state.stats.xp).level;
+      if (after > before) {
+        const toast = document.getElementById("levelup-toast");
+        document.getElementById("levelup-msg").textContent = `LEVEL ${after} にアップ！`;
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 3500);
+      }
+    }
+
+    function spawnConfetti() {
+      const layer = document.getElementById("confetti-layer");
+      const colors = ["#6366F1", "#EC4899", "#F59E0B", "#10B981", "#38BDF8"];
+      for (let i = 0; i < 14; i++) {
+        const el = document.createElement("div");
+        el.className = "confetti-piece";
+        el.style.left = `${20 + Math.random() * 60}%`;
+        el.style.top = `${10 + Math.random() * 20}%`;
+        el.style.backgroundColor = colors[i % colors.length];
+        el.style.animationDelay = `${Math.random() * 0.15}s`;
+        layer.appendChild(el);
+        setTimeout(() => el.remove(), 1200);
+      }
+    }
+
+    const STAMPS_DEF = [
+      { id: "first_step", icon: "🌱", title: "はじめの一歩", desc: "初めて学習", check: s => s.totalReviews >= 1 },
+      { id: "daily_goal", icon: "🎯", title: "今日の目標達成", desc: "1日15枚クリア", check: s => s.todayCount >= 15 },
+      { id: "master_10", icon: "🥉", title: "漢字ブロンズ", desc: "10語を覚えた", check: (s, p) => Object.values(p).filter(x => x.reps >= 1).length >= 10 },
+      { id: "master_30", icon: "🥈", title: "漢字シルバー", desc: "30語を覚えた", check: (s, p) => Object.values(p).filter(x => x.reps >= 1).length >= 30 },
+      { id: "level_3", icon: "⚡", title: "ハイレベル", desc: "LV.3に到達", check: s => getLevelInfo(s.xp).level >= 3 },
+      { id: "reviews_50", icon: "🔥", title: "努力の証", desc: "累計50回学習", check: s => s.totalReviews >= 50 },
+      { id: "custom_add", icon: "✍️", title: "マイ単語帳", desc: "単語を追加", check: () => state.cards.length > BUILTIN_CARDS.length },
+      { id: "streak_3", icon: "👑", title: "継続キング", desc: "3日連続学習", check: s => s.streak >= 3 }
+    ];
+
+    function checkStamps() {
+      STAMPS_DEF.forEach(st => {
+        if (!state.stats.unlockedStamps.includes(st.id) && st.check(state.stats, state.progress)) {
+          state.stats.unlockedStamps.push(st.id);
+        }
+      });
+    }
+
+    function updateTopUI() {
+      const lvl = getLevelInfo(state.stats.xp);
+      document.getElementById("hdr-level").textContent = lvl.level;
+      document.getElementById("hdr-xp-bar").style.width = `${lvl.pct}%`;
+      document.getElementById("hdr-xp-text").textContent = `${state.stats.xp} XP`;
+      document.getElementById("hdr-streak").textContent = `${state.stats.streak}日`;
+
+      const comboBadge = document.getElementById("combo-badge");
+      if (combo >= 2) {
+        comboBadge.classList.remove("hidden");
+        comboBadge.classList.add("flex");
+        document.getElementById("hdr-combo").textContent = `${combo} COMBO`;
+      } else {
+        comboBadge.classList.add("hidden");
+        comboBadge.classList.remove("flex");
+      }
+
+      const dpPct = Math.min(100, Math.round((state.stats.todayCount / DAILY_GOAL) * 100));
+      document.getElementById("daily-progress-text").textContent = `${state.stats.todayCount} / ${DAILY_GOAL}`;
+      document.getElementById("daily-progress-bar").style.width = `${dpPct}%`;
+      document.getElementById("queue-count").textContent = `残り ${sessionQueue.length}枚`;
+    }
+
+    function speakWord(text) {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "ja-JP";
+      utter.rate = 0.92;
+      window.speechSynthesis.speak(utter);
+    }
+
+    function flipCard() {
+      if (!currentCard) return;
+      isFlipped = !isFlipped;
+      document.getElementById("flashcard").classList.toggle("rotate-y-180", isFlipped);
+    }
+
+    function revealReadingHint() {
+      if (!currentCard) return;
+      const el = document.getElementById("front-reading-text");
+      el.textContent = currentCard.reading;
+      el.classList.remove("hidden");
+    }
+
+    function togglePinCurrent() {
+      if (!currentCard) return;
+      const p = { ...getCardProgress(currentCard.id) };
+      p.pinned = !p.pinned;
+      state.progress[currentCard.id] = p;
+      saveState();
+      renderCurrentCard();
+    }
+
+    function renderStatsView() {
+      const total = state.cards.length;
+      const mastered = state.cards.filter(c => getCardProgress(c.id).reps >= 1).length;
+      const pinned = state.cards.filter(c => getCardProgress(c.id).pinned).length;
+
+      document.getElementById("stat-mastered").textContent = mastered;
+      document.getElementById("stat-total").textContent = total;
+      document.getElementById("stat-reviews").textContent = state.stats.totalReviews;
+      document.getElementById("stat-pinned").textContent = pinned;
+
+      const grades = ["小4", "小5", "小6", "中学", "高校"];
+      const colors = ["from-sky-400 to-blue-500", "from-emerald-400 to-teal-500", "from-amber-400 to-orange-500", "from-purple-400 to-indigo-500", "from-pink-400 to-rose-500"];
+      document.getElementById("grade-stats-list").innerHTML = grades.map((g, idx) => {
+        const gCards = state.cards.filter(c => c.grade === g);
+        const gMastered = gCards.filter(c => getCardProgress(c.id).reps >= 1).length;
+        const pct = gCards.length ? Math.round((gMastered / gCards.length) * 100) : 0;
+        return `
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-bold">
+              <span>${g}</span>
+              <span>${gMastered} / ${gCards.length} 語 (${pct}%)</span>
+            </div>
+            <div class="w-full h-2.5 bg-[var(--secondary)] rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r ${colors[idx]}" style="width:${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      checkStamps();
+      document.getElementById("stamps-grid").innerHTML = STAMPS_DEF.map(st => {
+        const unlocked = state.stats.unlockedStamps.includes(st.id);
+        return `
+          <div class="rounded-2xl border p-3 text-center space-y-1 ${unlocked ? "bg-amber-500/10 border-amber-500/40" : "bg-[var(--secondary)]/40 border-[var(--border)] opacity-55"}">
+            <div class="text-3xl ${unlocked ? "animate-stamp" : "grayscale"}">${st.icon}</div>
+            <div class="text-xs font-extrabold">${st.title}</div>
+            <div class="text-[10px] text-[var(--muted-foreground)]">${st.desc}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderManageView() {
+      const q = document.getElementById("search-words").value.trim().toLowerCase();
+      const gf = document.getElementById("filter-list-grade").value;
+
+      const filtered = state.cards.filter(c => {
+        if (gf !== "ALL" && c.grade !== gf) return false;
+        if (q && !c.word.toLowerCase().includes(q) && !c.reading.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      document.getElementById("list-count").textContent = filtered.length;
+      document.getElementById("words-table-body").innerHTML = filtered.map(c => {
+        const p = getCardProgress(c.id);
+        const status = p.reps === 0 ? `<span class="px-1.5 py-0.5 rounded bg-[var(--secondary)]">未</span>` :
+          (p.interval >= 7 ? `<span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 font-bold">済</span>` : `<span class="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 font-bold">中</span>`);
+        return `
+          <tr>
+            <td class="p-2 font-bold">${c.grade}</td>
+            <td class="p-2 font-extrabold text-sm">${c.word}</td>
+            <td class="p-2 text-indigo-600 dark:text-indigo-400 font-bold">${c.reading}</td>
+            <td class="p-2">${status}</td>
+            <td class="p-2 text-center">
+              <button onclick="togglePinById('${c.id}')" class="text-base">${p.pinned ? "⭐" : "☆"}</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    window.togglePinById = function(id) {
+      const p = { ...getCardProgress(id) };
+      p.pinned = !p.pinned;
+      state.progress[id] = p;
+      saveState();
+      renderManageView();
+    };
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.tab;
+        document.querySelectorAll(".tab-btn").forEach(b => {
+          b.classList.remove("bg-indigo-600", "text-white", "shadow-sm");
+          b.classList.add("text-[var(--muted-foreground)]");
+        });
+        btn.classList.add("bg-indigo-600", "text-white", "shadow-sm");
+        btn.classList.remove("text-[var(--muted-foreground)]");
+
+        document.getElementById("tab-study").classList.toggle("hidden", target !== "study");
+        document.getElementById("tab-stats").classList.toggle("hidden", target !== "stats");
+        document.getElementById("tab-manage").classList.toggle("hidden", target !== "manage");
+
+        if (target === "stats") renderStatsView();
+        if (target === "manage") renderManageView();
+      });
+    });
+
+    document.querySelectorAll(".grade-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentGrade = btn.dataset.grade;
+        document.querySelectorAll(".grade-btn").forEach(b => {
+          b.classList.remove("bg-indigo-600", "text-white", "shadow-sm");
+          if (b.dataset.grade !== "PINNED") {
+            b.classList.add("bg-[var(--secondary)]", "text-[var(--foreground)]");
+          }
+        });
+        btn.classList.remove("bg-[var(--secondary)]", "text-[var(--foreground)]");
+        btn.classList.add("bg-indigo-600", "text-white", "shadow-sm");
+        buildQueue(false);
+      });
+    });
+
+    document.getElementById("btn-open-qr").addEventListener("click", () => {
+      const url = "https://noppe7856.github.io/kanji-flashcard/";
+      document.getElementById("qr-img").src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      document.getElementById("qr-modal").classList.remove("hidden");
+    });
+
+    document.getElementById("flashcard").addEventListener("click", flipCard);
+    document.getElementById("btn-flip-front").addEventListener("click", flipCard);
+    document.getElementById("btn-reveal-reading").addEventListener("click", revealReadingHint);
+    document.getElementById("btn-speak-front").addEventListener("click", () => currentCard && speakWord(currentCard.reading));
+    document.getElementById("btn-speak-back").addEventListener("click", () => currentCard && speakWord(currentCard.reading));
+    document.getElementById("btn-pin-front").addEventListener("click", (e) => { e.stopPropagation(); togglePinCurrent(); });
+    document.getElementById("btn-pin-back").addEventListener("click", (e) => { e.stopPropagation(); togglePinCurrent(); });
+
+    document.getElementById("rate-again").addEventListener("click", () => rateCard("again"));
+    document.getElementById("rate-hard").addEventListener("click", () => rateCard("hard"));
+    document.getElementById("rate-good").addEventListener("click", () => rateCard("good"));
+    document.getElementById("btn-practice-all").addEventListener("click", () => buildQueue(true));
+
+    document.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+      if (document.getElementById("tab-study").classList.contains("hidden")) return;
+      if (!currentCard) return;
+
+      if (e.code === "Space") { e.preventDefault(); flipCard(); }
+      else if (e.key.toLowerCase() === "r") revealReadingHint();
+      else if (e.key.toLowerCase() === "s") speakWord(currentCard.reading);
+      else if (isFlipped) {
+        if (e.key === "1") rateCard("again");
+        if (e.key === "2") rateCard("hard");
+        if (e.key === "3") rateCard("good");
+      }
+    });
+
+    document.getElementById("add-word-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const word = document.getElementById("inp-word").value.trim();
+      const reading = document.getElementById("inp-reading").value.trim();
+      if (!word || !reading) return;
+      state.cards.unshift({
+        id: "custom_" + Date.now(),
+        grade: document.getElementById("inp-grade").value,
+        type: /[ぁ-ん]/.test(word) ? "送り仮名" : "熟語",
+        word, reading,
+        meaning: document.getElementById("inp-meaning").value.trim(),
+        example: document.getElementById("inp-example").value.trim(),
+        theme: document.getElementById("inp-theme").value
+      });
+      checkStamps();
+      saveState();
+      e.target.reset();
+      renderManageView();
+      alert(`「${word}（${reading}）」を追加しました！`);
+    });
+
+    document.getElementById("search-words").addEventListener("input", renderManageView);
+    document.getElementById("filter-list-grade").addEventListener("change", renderManageView);
+
+    document.getElementById("file-import").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target.result;
+        let added = 0;
+        try {
+          if (file.name.endsWith(".json")) {
+            const arr = JSON.parse(text);
+            if (Array.isArray(arr)) {
+              arr.forEach((item, idx) => {
+                if (item.word && item.reading) {
+                  state.cards.unshift({
+                    id: item.id || `imp_${Date.now()}_${idx}`,
+                    grade: item.grade || "中学",
+                    type: item.type || (/[ぁ-ん]/.test(item.word) ? "送り仮名" : "熟語"),
+                    word: item.word, reading: item.reading,
+                    meaning: item.meaning || "", example: item.example || "",
+                    theme: item.theme || "book", imageUrl: item.imageUrl || ""
+                  });
+                  added++;
+                }
+              });
+            }
+          } else {
+            text.split(/\r?\n/).filter(l => l.trim()).forEach((line, idx) => {
+              if (idx === 0 && (line.includes("漢字") || line.includes("word"))) return;
+              const cols = line.split(",").map(s => s.trim().replace(/^"|"$/g, ""));
+              if (cols.length >= 2 && cols[0] && cols[1]) {
+                state.cards.unshift({
+                  id: `csv_${Date.now()}_${idx}`,
+                  grade: cols[2] || "中学",
+                  type: /[ぁ-ん]/.test(cols[0]) ? "送り仮名" : "熟語",
+                  word: cols[0], reading: cols[1],
+                  meaning: cols[3] || "", example: cols[4] || "",
+                  theme: cols[5] || "book", imageUrl: cols[6] || ""
+                });
+                added++;
+              }
+            });
+          }
+          checkStamps();
+          saveState();
+          renderManageView();
+          document.getElementById("import-status").textContent = `✅ ${added}語を取り込みました！`;
+        } catch {
+          alert("読み込みに失敗しました。");
+        }
+      };
+      reader.readAsText(file, "UTF-8");
+      e.target.value = "";
+    });
+
+    document.getElementById("btn-download-template").addEventListener("click", () => {
+      const csv = "\uFEFF漢字,読み,学年,意味,例文,テーマ\n勇敢,ゆうかん,小4,おそれずに立ち向かうようす,勇敢に立ち向かう。,challenge\n深呼吸,しんこきゅう,小5,大きく息を吸って吐くこと,本番前に深呼吸する。,nature\n";
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "kanji_template.csv";
+      a.click();
+    });
+
+    document.getElementById("btn-export-backup").addEventListener("click", () => {
+      const raw = localStorage.getItem(STORAGE_KEY) || "{}";
+      const blob = new Blob([raw], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `kanji_master_backup_${getTodayStr()}.json`;
+      a.click();
+    });
+
+    document.getElementById("file-restore").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          JSON.parse(ev.target.result);
+          localStorage.setItem(STORAGE_KEY, ev.target.result);
+          loadState();
+          buildQueue(false);
+          renderManageView();
+          alert("復元しました！");
+        } catch {
+          alert("無効なJSONファイルです。");
+        }
+      };
+      reader.readAsText(file, "UTF-8");
+      e.target.value = "";
+    });
+
+    document.getElementById("btn-reset-all").addEventListener("click", () => {
+      if (confirm("学習履歴とXPをすべてリセットしますか？")) {
+        state.progress = {};
+        state.stats = { xp: 0, streak: 1, lastStudyDate: getTodayStr(), todayCount: 0, totalReviews: 0, unlockedStamps: [] };
+        combo = 0;
+        saveState();
+        buildQueue(false);
+        renderManageView();
+      }
+    });
+
+    loadState();
+    buildQueue(false);
+  </script>
+</body>
+</html>
